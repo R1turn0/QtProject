@@ -1,0 +1,2 @@
+# QtProject
+一个学习Qt过程的Project集合
