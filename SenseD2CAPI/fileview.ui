@@ -101,6 +101,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="clockButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="minimumSize">
        <size>
         <width>80</width>
@@ -120,6 +123,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="seedButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="minimumSize">
        <size>
         <width>80</width>
@@ -138,19 +144,6 @@
      </widget>
     </item>
    </layout>
-  </widget>
-  <widget class="QDialogButtonBox" name="fileButtonBox">
-   <property name="geometry">
-    <rect>
-     <x>470</x>
-     <y>420</y>
-     <width>156</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="standardButtons">
-    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-   </property>
   </widget>
   <widget class="QWidget" name="layoutWidget_2">
    <property name="geometry">
@@ -186,12 +179,12 @@
     </item>
    </layout>
   </widget>
-  <widget class="QTextEdit" name="textEdit">
+  <widget class="QTextEdit" name="fileDownloadTextEdit">
    <property name="geometry">
     <rect>
      <x>140</x>
      <y>260</y>
-     <width>481</width>
+     <width>471</width>
      <height>131</height>
     </rect>
    </property>
@@ -352,6 +345,32 @@
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QPushButton" name="fileDownloadButton">
+   <property name="geometry">
+    <rect>
+     <x>550</x>
+     <y>420</y>
+     <width>75</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>下载文件</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="cancelButton">
+   <property name="geometry">
+    <rect>
+     <x>1</x>
+     <y>420</y>
+     <width>75</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>取消</string>
+   </property>
   </widget>
  </widget>
  <resources/>

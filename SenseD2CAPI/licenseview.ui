@@ -60,7 +60,7 @@
      <height>80</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_3">
+   <layout class="QVBoxLayout" name="TimeSpanLayout">
     <item>
      <widget class="QCheckBox" name="timeSpanCheckBox">
       <property name="text">
@@ -71,28 +71,31 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_7">
       <item>
-       <widget class="QRadioButton" name="radioButton_5">
+       <widget class="QRadioButton" name="timeSpanSetRadioButton">
         <property name="text">
          <string>设置</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_6">
+       <widget class="QRadioButton" name="timeSpanAddRadioButton">
         <property name="text">
          <string>追加</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_7">
+       <widget class="QRadioButton" name="timeSpanSubRadioButton">
         <property name="text">
          <string>减少</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_8">
+       <widget class="QRadioButton" name="timeSpanBanRadioButton">
         <property name="text">
          <string>禁用</string>
         </property>
@@ -144,7 +147,7 @@
      <height>79</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_5">
+   <layout class="QVBoxLayout" name="OverTimeLayout">
     <item>
      <widget class="QCheckBox" name="overTimeCheckBox">
       <property name="minimumSize">
@@ -167,28 +170,31 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_12">
       <item>
-       <widget class="QRadioButton" name="radioButton_13">
+       <widget class="QRadioButton" name="overTimeSetRadioButton">
         <property name="text">
          <string>设置</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_14">
+       <widget class="QRadioButton" name="overTimeAddRadioButton">
         <property name="text">
          <string>追加</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_15">
+       <widget class="QRadioButton" name="overTimeSubRadioButton">
         <property name="text">
          <string>减少</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_16">
+       <widget class="QRadioButton" name="overTimeBanRadioButton">
         <property name="text">
          <string>禁用</string>
         </property>
@@ -199,10 +205,7 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_13">
       <item>
-       <widget class="QDateEdit" name="overTimeDateEdit"/>
-      </item>
-      <item>
-       <widget class="QTimeEdit" name="overTimeTimeEdit"/>
+       <widget class="QDateTimeEdit" name="endDateTimeEdit"/>
       </item>
      </layout>
     </item>
@@ -217,7 +220,7 @@
      <height>79</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_6">
+   <layout class="QVBoxLayout" name="UseCountLayout">
     <item>
      <widget class="QCheckBox" name="useCountCheckBox">
       <property name="text">
@@ -228,28 +231,31 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_14">
       <item>
-       <widget class="QRadioButton" name="radioButton_17">
+       <widget class="QRadioButton" name="useCountSetRadioButton">
         <property name="text">
          <string>设置</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_18">
+       <widget class="QRadioButton" name="useCountAddRadioButton">
         <property name="text">
          <string>追加</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_19">
+       <widget class="QRadioButton" name="useCountSubRadioButton">
         <property name="text">
          <string>减少</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_20">
+       <widget class="QRadioButton" name="useCountBanRadioButton">
         <property name="text">
          <string>禁用</string>
         </property>
@@ -316,6 +322,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="clockButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="minimumSize">
        <size>
         <width>80</width>
@@ -335,6 +344,9 @@
     </item>
     <item>
      <widget class="QPushButton" name="seedButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="minimumSize">
        <size>
         <width>80</width>
@@ -357,13 +369,13 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>403</x>
+     <x>453</x>
      <y>410</y>
-     <width>221</width>
+     <width>171</width>
      <height>32</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_2">
+   <layout class="QHBoxLayout" name="SureLayout">
     <item>
      <widget class="QPushButton" name="previewButton">
       <property name="minimumSize">
@@ -413,7 +425,7 @@
      <height>79</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <layout class="QVBoxLayout" name="StartTimeLayout">
     <item>
      <widget class="QCheckBox" name="startTimeCheckBox">
       <property name="minimumSize">
@@ -436,28 +448,31 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_5">
       <item>
-       <widget class="QRadioButton" name="radioButton">
+       <widget class="QRadioButton" name="startTimeSetRadioButton">
         <property name="text">
          <string>设置</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_2">
+       <widget class="QRadioButton" name="startTimeAddRadioButton">
         <property name="text">
          <string>追加</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_3">
+       <widget class="QRadioButton" name="startTimeSubRadioButton">
         <property name="text">
          <string>减少</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="radioButton_4">
+       <widget class="QRadioButton" name="startTimeBanRadioButton">
         <property name="text">
          <string>禁用</string>
         </property>
@@ -468,16 +483,13 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_6">
       <item>
-       <widget class="QDateEdit" name="startTimeDateEdit"/>
-      </item>
-      <item>
-       <widget class="QTimeEdit" name="startTimeTimeEdit"/>
+       <widget class="QDateTimeEdit" name="startDateTimeEdit"/>
       </item>
      </layout>
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>120</x>
@@ -486,18 +498,18 @@
      <height>24</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QHBoxLayout" name="LicenseTypeLayout">
     <item>
      <widget class="QLabel" name="label_2">
       <property name="minimumSize">
        <size>
-        <width>72</width>
+        <width>63</width>
         <height>20</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
-        <width>72</width>
+        <width>63</width>
         <height>20</height>
        </size>
       </property>
@@ -542,85 +554,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>250</y>
-     <width>161</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_4">
-    <item>
-     <widget class="QCheckBox" name="readonlyCheckBox">
-      <property name="text">
-       <string>只读区</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="readonlyButton">
-      <property name="text">
-       <string>编辑</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>280</y>
-     <width>161</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_9">
-    <item>
-     <widget class="QCheckBox" name="readWriteCheckBox">
-      <property name="text">
-       <string>读写区</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="readWriteButton">
-      <property name="text">
-       <string>编辑</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>310</y>
-     <width>161</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_10">
-    <item>
-     <widget class="QCheckBox" name="publicCheckBox">
-      <property name="text">
-       <string>公开区</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="publicButton">
-      <property name="text">
-       <string>编辑</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>120</x>
@@ -629,27 +563,42 @@
      <height>26</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_18">
+   <layout class="QHBoxLayout" name="ConcurrentManerLayout">
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_17">
       <item>
-       <widget class="QLabel" name="label_3">
+       <widget class="QLabel" name="concurrentManerLabel">
         <property name="text">
          <string>并发方式：</string>
         </property>
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_11">
+       <layout class="QHBoxLayout" name="concurrentManerRadioButtonLayout">
         <item>
-         <widget class="QRadioButton" name="radioButton_9">
+         <widget class="QRadioButton" name="singleRadioButton">
+          <property name="tabletTracking">
+           <bool>false</bool>
+          </property>
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>单机</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioButton_12">
+         <widget class="QRadioButton" name="networkRadioButton">
           <property name="text">
            <string>网络</string>
           </property>
@@ -663,6 +612,9 @@
      <layout class="QHBoxLayout" name="horizontalLayout_16">
       <item>
        <widget class="QComboBox" name="concurrentManerComboBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="minimumSize">
          <size>
           <width>60</width>
@@ -689,6 +641,9 @@
       </item>
       <item>
        <widget class="QLineEdit" name="concurrentManerLineEdit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="minimumSize">
          <size>
           <width>133</width>
@@ -707,32 +662,96 @@
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>380</x>
+     <y>250</y>
+     <width>151</width>
+     <height>92</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="DataLayout">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QCheckBox" name="readonlyCheckBox">
+        <property name="text">
+         <string>只读区</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="readonlyButton">
+        <property name="text">
+         <string>编辑</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_9">
+      <item>
+       <widget class="QCheckBox" name="readWriteCheckBox">
+        <property name="text">
+         <string>读写区</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="readWriteButton">
+        <property name="text">
+         <string>编辑</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="publicLayout">
+      <item>
+       <widget class="QCheckBox" name="publicCheckBox">
+        <property name="text">
+         <string>公开区</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="publicButton">
+        <property name="text">
+         <string>编辑</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QTextEdit" name="previewTextEdit">
+   <property name="geometry">
+    <rect>
+     <x>380</x>
+     <y>350</y>
+     <width>241</width>
+     <height>51</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>120</x>
      <y>90</y>
-     <width>321</width>
+     <width>309</width>
      <height>25</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_19">
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QCheckBox" name="licenseCheckBox">
-        <property name="minimumSize">
-         <size>
-          <width>72</width>
-          <height>20</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>72</width>
-          <height>20</height>
-         </size>
-        </property>
+       <widget class="QLabel" name="licenseIDLabel">
         <property name="text">
          <string>许可ID：</string>
         </property>
