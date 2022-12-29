@@ -6,7 +6,6 @@
 #include <QMessageBox>
 #include <ctype.h>
 #include <QDateTime>
-#include <QButtonGroup>
 
 #include <inc/d2c.h>
 #include <inc/ss_error.h>
@@ -53,14 +52,6 @@ private slots:
 
     void on_licenseIDLineEdit_textChanged(const QString &arg1);
 
-    void on_startTimeCheckBox_stateChanged(int arg1);
-
-    void on_overTimeCheckBox_stateChanged(int arg1);
-
-    void on_timeSpanCheckBox_stateChanged(int arg1);
-
-    void on_useCountCheckBox_stateChanged(int arg1);
-
     void on_perpetualLicenseCheckBox_stateChanged(int arg1);
 
     void on_timeSpanLineEdit_textChanged(const QString &arg1);
@@ -75,11 +66,98 @@ private slots:
 
     void on_networkRadioButton_clicked();
 
+    void on_concurrentManerComboBox_activated(int index);
+
+    void on_concurrentManerLineEdit_textChanged(const QString &arg1);
+
+    void on_startTimeCheckBox_clicked();
+
+    void on_endTimeCheckBox_clicked();
+
+    void on_timeSpanCheckBox_clicked();
+
+    void on_useCountCheckBox_clicked();
+
+    void on_publicGroupBox_clicked();
+
+    void on_pubDeviationCheckBox_stateChanged(int arg1);
+
+    void on_pubDeviationLineEdit_textChanged(const QString &arg1);
+
+    void on_pubResetSizeCheckBox_stateChanged(int arg1);
+
+    void on_pubResetSizeLineEdit_textChanged(const QString &arg1);
+
+    void on_pubHexTextEdit_textChanged();
+
+    void on_pubTextEdit_textChanged();
+
+    void on_readWriteGroupBox_clicked();
+
+    void on_rwDeviationCheckBox_stateChanged(int arg1);
+
+    void on_rwDeviationLineEdit_textChanged(const QString &arg1);
+
+    void on_rwResetSizeCheckBox_stateChanged(int arg1);
+
+    void on_rwResetSizeLineEdit_textChanged(const QString &arg1);
+
+    void on_rwHexTextEdit_textChanged();
+
+    void on_rwTextEdit_textChanged();
+
+    void on_onlyReadGroupBox_clicked();
+
+    void on_orDeviationCheckBox_stateChanged(int arg1);
+
+    void on_orDeviationLineEdit_textChanged(const QString &arg1);
+
+    void on_orResetSizeCheckBox_stateChanged(int arg1);
+
+    void on_orResetSizeLineEdit_textChanged(const QString &arg1);
+
+    void on_orHexTextEdit_textChanged();
+
+    void on_orTextEdit_textChanged();
+
+    void on_cancelButton_clicked();
+
+    void on_startTimeSetRadioButton_clicked();
+
+    void on_startTimeAddRadioButton_clicked();
+
+    void on_startTimeSubRadioButton_clicked();
+
+    void on_startTimeBanRadioButton_clicked();
+
+    void on_endTimeSetRadioButton_clicked();
+
+    void on_endTimeAddRadioButton_clicked();
+
+    void on_endTimeSubRadioButton_clicked();
+
+    void on_endTimeBanRadioButton_clicked();
+
+    void on_timeSpanSetRadioButton_clicked();
+
+    void on_timeSpanAddRadioButton_clicked();
+
+    void on_timeSpanSubRadioButton_clicked();
+
+    void on_timeSpanBanRadioButton_clicked();
+
+    void on_useCountSetRadioButton_clicked();
+
+    void on_useCountAddRadioButton_clicked();
+
+    void on_useCountSubRadioButton_clicked();
+
+    void on_useCountBanRadioButton_clicked();
+
 private:
     Ui::LicenseView *ui;
     cJSON* root = nullptr;
     SS_CHAR* result = nullptr;
-    QButtonGroup* concurrentManerRadioButtonGroup = nullptr;
 };
 
 #endif // LICENSEVIEW_H

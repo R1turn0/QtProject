@@ -10,16 +10,30 @@ LicenseView::LicenseView(QWidget *parent) :
     get_result();
 
     // 限制QLineEdit输入数据类型
+    // setFocusPolicy(Qt.NoFocus)设置它不氪获得焦点
     QRegExp regx("[0-9]+$");   // 第一位输入1-9,后输入0-9: [1-9][0-9]+$
     QValidator* validator = new QRegExpValidator(regx);
     ui -> licenseIDLineEdit         -> setValidator(validator);
     ui -> concurrentManerLineEdit   -> setValidator(validator);
     ui -> timeSpanLineEdit          -> setValidator(validator);
     ui -> useCountLineEdit          -> setValidator(validator);
+    ui -> startTimeLineEdit         -> setValidator(validator);
+    ui -> endTimeLineEdit           -> setValidator(validator);
+    ui -> pubDeviationLineEdit      -> setValidator(validator);
+    ui -> pubResetSizeLineEdit      -> setValidator(validator);
+    ui -> rwDeviationLineEdit       -> setValidator(validator);
+    ui -> rwResetSizeLineEdit       -> setValidator(validator);
+    ui -> orDeviationLineEdit       -> setValidator(validator);
+    ui -> orResetSizeLineEdit       -> setValidator(validator);
 
+    // 设置RadioButtonGrop，添加RadioButton并设置ID，通过checkedId()选择信号
 //    QButtonGroup* concurrentManerRadioButtonGroup = new QButtonGroup(this);
-    concurrentManerRadioButtonGroup -> addButton(ui -> singleRadioButton, 0);
-    concurrentManerRadioButtonGroup -> addButton(ui -> networkRadioButton, 1);
+//    concurrentManerRadioButtonGroup -> addButton(ui -> singleRadioButton, 0);
+//    concurrentManerRadioButtonGroup -> addButton(ui -> networkRadioButton, 1);
+
+    // 设置DateTimeEdit为当前日期
+    ui -> startDateTimeEdit -> setDate(QDate::currentDate());
+    ui -> endDateTimeEdit -> setDate(QDate::currentDate());
 }
 
 LicenseView::~LicenseView()
@@ -37,6 +51,10 @@ LicenseView::~LicenseView()
     delete ui;
 }
 
+
+/************************************************************************/
+/*                             签发D2C包                                 */
+/************************************************************************/
 void LicenseView::on_signButton_clicked()
 {
     char hmaster_pin[33] = {"12345678"};
@@ -131,18 +149,23 @@ void LicenseView::on_signButton_clicked()
         if (SS_OK == ret)
         {
             // 写入本地文件，升级至锁内需要通过 slm_update() API接口，或者使用用户许可工具的加密锁数据升级工具。
-            strcpy(d2c_filename, strDevSn);
+//            strcpy(d2c_filename, strDevSn);
+            strcpy(d2c_filename, "SenseD2CAPI");
 
-            if (iWhich == LIC_DEL_ONE)
+            if (ui -> licenseTypeComboBox -> currentText() == "许可删除")
+                strcat(d2c_filename, "_license_add_one.d2c");
+            else if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
+                strcat(d2c_filename, "_license_update_one.d2c");
+            else if (ui -> licenseTypeComboBox -> currentText() == "许可删除")
                 strcat(d2c_filename, "_license_del_one.d2c");
-            else if (iWhich == LIC_DEL_ALL)
+            else if (ui -> licenseTypeComboBox -> currentText() == "删除所有许可")
                 strcat(d2c_filename, "_license_del_all.d2c");
-            else if (iWhich == LIC_LOCK_ALL)
+            else if (ui -> licenseTypeComboBox -> currentText() == "锁定所有许可")
                 strcat(d2c_filename, "_license_lock_all.d2c");
-            else if (iWhich == LIC_UNLOCK_ALL)
+            else if (ui -> licenseTypeComboBox -> currentText() == "解锁所有许可")
                 strcat(d2c_filename, "_license_unlock_all.d2c");
             else
-                QMessageBox::warning(this, "提示", tr("该功能尚未推出，敬请期待~"));
+                QMessageBox::warning(this, "错误", tr("该功能尚未推出，敬请期待~"));
             write_file(d2c_filename, d2c, d2c_len);
             qDebug() << "signButton success to Update d2c file: " << d2c_filename;
             QMessageBox::information(this, "成功", "Success Update D2C file!");
@@ -160,101 +183,165 @@ void LicenseView::on_signButton_clicked()
 }
 
 
+/************************************************************************/
+/*                            制作result                                */
+/************************************************************************/
 int LicenseView::get_result()
 {
     SS_UINT32 ret = SS_ERROR;
     SS_CHAR temp[128] = {0};
 
     root = cJSON_CreateObject();
-    if (ui -> licenseTypeComboBox -> currentText() == "许可增加")
+
+
+    // ================ 添加许可 ================
+    if (ui -> licenseTypeComboBox -> currentText() == "许可增加" || ui -> licenseTypeComboBox -> currentText() == "许可更新")
     {
         QString szLicID = ui -> licenseIDLineEdit -> text();
         SS_UINT32 licID = szLicID.toUInt();
-        // 添加许可
-        cJSON_AddStringToObject(root, "op", "addlic");
-        // 强制写入（标识）
-//        cJSON_AddBoolToObject(root, "force", cJSON_True);
-        // 许可ID
+        // ======== 添加许可 ========
+        if (ui -> licenseTypeComboBox -> currentText() == "许可增加")
+            cJSON_AddStringToObject(root, "op", "addlic");
+        else
+            cJSON_AddStringToObject(root, "op", "updatelic");
+        // ======== 强制写入（标识） ========
+//        cJSON_AddBoolToObject(root, "force", cJSON_True); // 该项目暂无此按钮
+        // ======== 许可ID ========
         cJSON_AddNumberToObject(root, "license_id", licID);
-        // 许可条件（时间
+        // ======== 写入单机/网络锁 ========
+        if (ui -> singleRadioButton -> isChecked())
+        {
+            // 并发访问-单机锁
+            cJSON_AddStringToObject(root, "concurrent_type", "process");
+            cJSON_AddStringToObject(root, "concurrent", "=0");
+        }
+        else
+        {
+            // 并发访问-网络锁
+            // 如果不允许并发访问（单机锁），将 concurrent_type 设置为 "process"，concurrent设置为 "=0"。
+            // 限制并发类型（会话），限制同时访问许可的电脑数
+            // 如果要限制访问许可的程序数量，将 win_user_session 改为 process。
+            if (ui -> concurrentManerComboBox -> currentText() == "进程")
+                cJSON_AddStringToObject(root, "concurrent_type", "process");
+            else
+                cJSON_AddStringToObject(root, "concurrent_type", "win_user_session");
+            // 同时访问电脑数数量
+            sprintf(temp, "=%d", (ui -> concurrentManerLineEdit -> text()).toUInt());
+            cJSON_AddStringToObject(root, "concurrent", temp);
+        }
+        // ======== 许可条件（时间 ========
         // 永久许可
-//        switch (concurrentManerRadioButtonGroup -> checkedId())
-//        {
-//        case 0:
-//            /************************************************************************/
-//            /*                      并发访问-单机锁                                 */
-//            /************************************************************************/
-//            // 单机锁和网络锁设置只能是二选一
-//            cJSON_AddStringToObject(root, "concurrent_type", "process");
-//            cJSON_AddStringToObject(root, "concurrent", "=0");
-//            break;
-//        case 1:
-//            /************************************************************************/
-//            /*                      并发访问-网络锁                                 */
-//            /************************************************************************/
-//            // 如果不允许并发访问（单机锁），将 concurrent_type 设置为 "process"，concurrent设置为 "=0"。
-//            // 限制并发类型（会话），限制同时访问许可的电脑数
-//            // 如果要限制访问许可的程序数量，将 win_user_session 改为 process。
-//            cJSON_AddStringToObject(root, "concurrent_type", "win_user_session");
-//            // 同时访问电脑数数量
-//            cJSON_AddStringToObject(root, "concurrent", "=3");
-//            break;
-//        }
-
         if (ui -> perpetualLicenseCheckBox -> isChecked())
         {
             // 写入永久许可
-            cJSON_AddStringToObject(root, "???", temp);
         }
-        // 开始时间
-        if (ui -> startTimeCheckBox -> isChecked())
+        else
         {
-//            QDateTime startDate = QDateTime::fromString(
-//                        QString("%1-%2-%3 %4:%5")
-//                        .arg(ui -> startDateTimeEdit -> date().year())
-//                        .arg(ui -> startDateTimeEdit -> date().month(), 2, 10, QLatin1Char('0'))
-//                        .arg(ui -> startDateTimeEdit -> date().day(), 2, 10, QLatin1Char('0'))
-//                        .arg(ui -> startDateTimeEdit -> time().hour(), 2, 10, QLatin1Char('0'))
-//                        .arg(ui -> startDateTimeEdit -> time().minute(), 2, 10, QLatin1Char('0')),
-//                        "yyyy-MM-dd hh:mm");
-//            int startTimestamp = startDate.toUTC().toTime_t();
-//            itoa(startTimestamp, temp, 10);
-            QDateTime dateTime = ui -> startDateTimeEdit -> dateTime();
-            sprintf(temp, "=%d", dateTime.toUTC().toTime_t());
-            cJSON_AddStringToObject(root, "start_time", temp);
-        }
-        // 结束时间
-        if (ui -> overTimeCheckBox -> isChecked())
-        {
-            QDateTime dateTime = ui -> startDateTimeEdit -> dateTime();
-            sprintf(temp, "=%d", dateTime.toUTC().toTime_t());
-            cJSON_AddStringToObject(root, "end_time", temp);
-        }
-        // 时间跨度
-        if (ui -> timeSpanCheckBox -> isChecked())
-        {
-            QString szTimeSpan = ui -> timeSpanLineEdit -> text();
-            sprintf(temp, "=%d", szTimeSpan.toUInt());
-            cJSON_AddStringToObject(root, "span", temp);
-        }
-        // 使用计数
-        if (ui -> useCountCheckBox -> isChecked())
-        {
-            QString szUseCount = ui -> useCountLineEdit -> text();
-            sprintf(temp, "=%d", szUseCount.toUInt());
-            cJSON_AddStringToObject(root, "counter", temp);
-        }
-    }
-    else if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
-    {
-        QString szLicID = ui -> licenseIDLineEdit -> text();
-        SS_UINT32 licID = szLicID.toUInt();
-        // 添加许可
-        cJSON_AddStringToObject(root, "op", "updatelic");
-        // 许可ID
-        cJSON_AddNumberToObject(root, "license_id", licID);
+            // 开始时间
+            if (ui -> startTimeCheckBox -> isChecked())
+            {
+//                QDateTime startDate = QDateTime::fromString(
+//                            QString("%1-%2-%3 %4:%5")
+//                            .arg(ui -> startDateTimeEdit -> date().year())
+//                            .arg(ui -> startDateTimeEdit -> date().month(), 2, 10, QLatin1Char('0'))
+//                            .arg(ui -> startDateTimeEdit -> date().day(), 2, 10, QLatin1Char('0'))
+//                            .arg(ui -> startDateTimeEdit -> time().hour(), 2, 10, QLatin1Char('0'))
+//                            .arg(ui -> startDateTimeEdit -> time().minute(), 2, 10, QLatin1Char('0')),
+//                            "yyyy-MM-dd hh:mm");
+//                int startTimestamp = startDate.toUTC().toTime_t();
+//                itoa(startTimestamp, temp, 10);
+                if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
+                {
+                    if (ui -> startTimeSetRadioButton -> isChecked())
+                        sprintf(temp, "=%d", (ui -> startDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                    else if (ui -> startTimeAddRadioButton -> isChecked())
+                        sprintf(temp, "+%d", (ui -> startDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                    else if (ui -> startTimeSubRadioButton -> isChecked())
+                        sprintf(temp, "-%d", (ui -> startDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                    else if (ui -> startTimeBanRadioButton -> isChecked())
+                        qstrncpy(temp, "disable", sizeof("disable"));
+                }
+                else
+                    sprintf(temp, "=%d", (ui -> startDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                cJSON_AddStringToObject(root, "start_time", temp);
+            }
+            // 结束时间
+            if (ui -> endTimeCheckBox -> isChecked())
+            {
+                if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
+                {
+                    if (ui -> endTimeSetRadioButton -> isChecked())
+                        sprintf(temp, "=%d", (ui -> endDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                    else if (ui -> endTimeAddRadioButton -> isChecked())
+                        sprintf(temp, "+%d", (ui -> endDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                    else if (ui -> endTimeSubRadioButton -> isChecked())
+                        sprintf(temp, "-%d", (ui -> endDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                    else if (ui -> endTimeBanRadioButton -> isChecked())
+                        qstrncpy(temp, "disable", sizeof("disable"));
+                }
+                else
+                    sprintf(temp, "=%d", (ui -> endDateTimeEdit -> dateTime()).toUTC().toTime_t());
+                cJSON_AddStringToObject(root, "end_time", temp);
+            }
+            // ======== 时间跨度 ========
+            if (ui -> timeSpanCheckBox -> isChecked())
+            {
+                int TimeSpanNum = (ui -> timeSpanLineEdit -> text()).toUInt();
+                if (ui -> timeSpanComboBox -> currentText() == "天")
+                    TimeSpanNum *= 24 * 3600;
+                if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
+                {
+                    if (ui -> timeSpanSetRadioButton -> isChecked())
+                        sprintf(temp, "=%d", TimeSpanNum);
+                    else if (ui -> timeSpanAddRadioButton -> isChecked())
+                        sprintf(temp, "+%d", TimeSpanNum);
+                    else if (ui -> timeSpanSubRadioButton -> isChecked())
+                        sprintf(temp, "-%d", TimeSpanNum);
+                    else if (ui -> timeSpanBanRadioButton -> isChecked())
+                        qstrncpy(temp, "disable", sizeof("disable"));
+                }
+                else
+                    sprintf(temp, "=%d", TimeSpanNum);
+                cJSON_AddStringToObject(root, "span", temp);
+            }
+            // ======== 使用计数 ========
+            if (ui -> useCountCheckBox -> isChecked())
+            {
+                if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
+                {
+                    if (ui -> useCountSetRadioButton -> isChecked())
+                        sprintf(temp, "=%d", (ui -> useCountLineEdit -> text()).toUInt());
+                    else if (ui -> useCountAddRadioButton -> isChecked())
+                        sprintf(temp, "+%d", (ui -> useCountLineEdit -> text()).toUInt());
+                    else if (ui -> useCountSubRadioButton -> isChecked())
+                        sprintf(temp, "-%d", (ui -> useCountLineEdit -> text()).toUInt());
+                    else if (ui -> useCountBanRadioButton -> isChecked())
+                        qstrncpy(temp, "disable", sizeof("disable"));
+                }
+                else
+                    sprintf(temp, "=%d", (ui -> useCountLineEdit -> text()).toUInt());
 
+
+
+                cJSON_AddStringToObject(root, "counter", temp);
+            }
+        }
     }
+
+
+    // ================ 许可更新 ================
+//    else if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
+//    {
+//        QString szLicID = ui -> licenseIDLineEdit -> text();
+//        SS_UINT32 licID = szLicID.toUInt();
+//        // 添加许可
+//        cJSON_AddStringToObject(root, "op", "updatelic");
+//        // 许可ID
+//        cJSON_AddNumberToObject(root, "license_id", licID);
+//    }
+
+
+    // ================ 许可删除 ================
     else if (ui -> licenseTypeComboBox -> currentText() == "许可删除")
     {
         // 删除单条指定许可 iWhich == LIC_DEL_ONE
@@ -264,27 +351,84 @@ int LicenseView::get_result()
         SS_UINT32 licID = szLicID.toUInt();   // QByteArray::toUShort
         cJSON_AddNumberToObject(root, "license_id", licID);
     }
+
+
+    // ================ 删除所有许可 ================
     else if (ui -> licenseTypeComboBox -> currentText() == "删除所有许可")
     {
         //全部删除，包括数据区 iWhich == LIC_DEL_ALL
         cJSON_AddStringToObject(root, "op", "delalllic");
     }
+
+
+    // ================ 锁定所有许可 ================
     else if (ui -> licenseTypeComboBox -> currentText() == "锁定所有许可")
     {
         // 锁定所有许可 iWhich == LIC_LOCK_ALL
         cJSON_AddStringToObject(root, "op", "lockalllic");
     }
+
+
+    // ================ 解锁所有许可 ================
     else if (ui -> licenseTypeComboBox -> currentText() == "解锁所有许可")
     {
         // 解锁所有许可 iWhich == LIC_UNLOCK_ALL
         cJSON_AddStringToObject(root, "op", "unlockalllic");
     }
 
+
+    // ================ 公开区 ================
+    if (ui -> publicGroupBox -> isChecked() && ui -> publicGroupBox -> isEnabled())
+    {
+        cJSON* dateArea = nullptr;
+        dateArea = cJSON_CreateObject();
+        QString pubDate = ui -> pubTextEdit -> toPlainText();
+//        bytes_to_hexstr(pubDate.toUtf8(), pubDate.length(), temp);
+        qstrncpy(temp,pubDate.toLatin1().toHex(), pubDate.length() * 4);
+
+        cJSON_AddStringToObject(dateArea, "data", temp);
+        cJSON_AddNumberToObject(dateArea, "offset", 0);
+        cJSON_AddNumberToObject(dateArea, "resize", pubDate.length());
+        cJSON_AddItemToObject(root, "pub", dateArea);
+    }
+
+
+    // ================ 读写区 ================
+    if (ui -> readWriteGroupBox -> isChecked() && ui -> readWriteGroupBox -> isEnabled())
+    {
+        cJSON* dateArea = nullptr;
+        dateArea = cJSON_CreateObject();
+        QString pubDate = ui -> rwTextEdit -> toPlainText();
+        bytes_to_hexstr(pubDate.toUtf8(), pubDate.length(), temp);
+
+        cJSON_AddStringToObject(dateArea, "data", temp);
+        cJSON_AddNumberToObject(dateArea, "offset", 0);
+        cJSON_AddNumberToObject(dateArea, "resize", pubDate.length());
+        cJSON_AddItemToObject(root, "raw", dateArea);
+    }
+
+
+    // ================ 只读区 ================
+    if (ui -> onlyReadGroupBox -> isChecked() && ui -> onlyReadGroupBox -> isEnabled())
+    {
+        cJSON* dateArea = nullptr;
+        dateArea = cJSON_CreateObject();
+        QString pubDate = ui -> orTextEdit -> toPlainText();
+        bytes_to_hexstr(pubDate.toUtf8(), pubDate.length(), temp);
+
+        cJSON_AddStringToObject(dateArea, "data", temp);
+        cJSON_AddNumberToObject(dateArea, "offset", 0);
+        cJSON_AddNumberToObject(dateArea, "resize", pubDate.length());
+        cJSON_AddItemToObject(root, "rom", dateArea);
+    }
+
+
+    // ================制作result================
     result = cJSON_Print(root);
     if (result)
     {
         qDebug() << "signButton result: " << result;
-        ui -> previewTextEdit -> setText(result);
+        ui -> previewTextBrowser -> setText(result);
     }
     else
     {
@@ -297,12 +441,19 @@ int LicenseView::get_result()
 }
 
 
-// 判断参数是否合法
+/************************************************************************/
+/*                         判断参数是否合法                                */
+/************************************************************************/
 int LicenseView::is_sure()
 {
     int ret = SS_ERROR;
 
     // 判断许可ID是否合法
+    if ((ui -> licenseIDLineEdit ->text()).isEmpty())
+    {
+        QMessageBox::warning(this, "错误", "许可ID不能为空");
+        return ret;
+    }
 //    QString szLicID = ui -> licenseIDLineEdit -> text();
 //    if (!isDigitStr(szLicID))
 //    {
@@ -310,19 +461,33 @@ int LicenseView::is_sure()
 //        return ret;
 //    }
 
-    // 判断许可时间
-    if (ui -> startTimeCheckBox -> isChecked() && ui -> overTimeCheckBox -> isChecked())
+    // 判断并发数是否合法
+    if (ui -> networkRadioButton -> isChecked())
     {
-        int startYear = ui -> startDateTimeEdit -> date().year();
-        int startMonth = ui -> startDateTimeEdit -> date().month();
-        int startDay = ui -> startDateTimeEdit -> date().day();
-        int startHour = ui -> startDateTimeEdit -> time().hour();
-        int startMinute = ui -> startDateTimeEdit -> time().minute();
-        int overYear = ui -> endDateTimeEdit -> date().year();
-        int overMonth = ui -> endDateTimeEdit -> date().month();
-        int overDay = ui -> endDateTimeEdit -> date().day();
-        int overHour = ui -> endDateTimeEdit -> time().hour();
-        int overMinute = ui -> endDateTimeEdit -> time().minute();
+        unsigned int concurrentNum = (ui -> concurrentManerLineEdit -> text()).toUInt();
+        if (0 == concurrentNum)
+        {
+            QMessageBox::warning(this, "错误", "设置并发数必须大于0");
+            return ret;
+        }
+    }
+
+    // 判断许可时间
+    if (ui -> startTimeCheckBox -> isChecked()
+            && ui -> endTimeCheckBox -> isChecked()
+            && ui -> startTimeCheckBox -> isEnabled()
+            && ui -> endTimeCheckBox -> isEnabled())
+    {
+        unsigned int startYear = ui -> startDateTimeEdit -> date().year();
+        unsigned int startMonth = ui -> startDateTimeEdit -> date().month();
+        unsigned int startDay = ui -> startDateTimeEdit -> date().day();
+        unsigned int startHour = ui -> startDateTimeEdit -> time().hour();
+        unsigned int startMinute = ui -> startDateTimeEdit -> time().minute();
+        unsigned int overYear = ui -> endDateTimeEdit -> date().year();
+        unsigned int overMonth = ui -> endDateTimeEdit -> date().month();
+        unsigned int overDay = ui -> endDateTimeEdit -> date().day();
+        unsigned int overHour = ui -> endDateTimeEdit -> time().hour();
+        unsigned int overMinute = ui -> endDateTimeEdit -> time().minute();
 
         if (overYear > startYear)
             qDebug() << "signButton success Date OK!";
@@ -341,6 +506,17 @@ int LicenseView::is_sure()
         }
         qDebug() << "signButton success startTime:  " << startYear << "/" << startMonth << "/" << startDay << " " << startHour << ":" << startMinute;
         qDebug() << "signButton success overTime:   " << overYear << "/" << overMonth << "/" << overDay << " " << overHour << ":" << overMinute;
+    }
+
+    // 判断使用次数是否合法
+    if (ui -> useCountCheckBox -> isChecked())
+    {
+        unsigned int useCountNum = (ui -> useCountLineEdit -> text()).toUInt();
+        if (0 == useCountNum)
+        {
+            QMessageBox::warning(this, "错误", "使用次数必须大于0");
+            return ret;
+        }
     }
 
     return SS_OK;
@@ -363,105 +539,31 @@ bool LicenseView::isDigitStr(QString str)
 }
 
 
-void LicenseView::on_licenseIDLineEdit_textChanged(const QString &arg1)
-{
-    get_result();
-}
-
-
-void LicenseView::on_startTimeCheckBox_stateChanged(int arg1)
-{
-    get_result();
-}
-
-
-void LicenseView::on_overTimeCheckBox_stateChanged(int arg1)
-{
-    get_result();
-}
-
-
-void LicenseView::on_timeSpanCheckBox_stateChanged(int arg1)
-{
-    get_result();
-}
-
-
-void LicenseView::on_useCountCheckBox_stateChanged(int arg1)
-{
-    get_result();
-}
-
-
-void LicenseView::on_timeSpanLineEdit_textChanged(const QString &arg1)
-{
-    get_result();
-}
-
-
-void LicenseView::on_useCountLineEdit_textChanged(const QString &arg1)
-{
-    get_result();
-}
-
-
-void LicenseView::on_startDateTimeEdit_dateTimeChanged(const QDateTime &dateTime)
-{
-    get_result();
-}
-
-
-void LicenseView::on_endDateTimeEdit_dateChanged(const QDate &date)
-{
-    get_result();
-}
-
-
+// ================ 永久许可 ================
 void LicenseView::on_perpetualLicenseCheckBox_stateChanged(int arg1)
 {
     get_result();
 
     // StartTimeLayout
     ui -> startTimeCheckBox -> setDisabled(arg1);
-    ui -> startTimeSetRadioButton -> setDisabled(arg1);
-    ui -> startTimeAddRadioButton -> setDisabled(arg1);
-    ui -> startTimeSubRadioButton -> setDisabled(arg1);
-    ui -> startTimeBanRadioButton -> setDisabled(arg1);
-    ui -> startDateTimeEdit -> setDisabled(arg1);
-    ui -> startDateTimeEdit -> setDisabled(arg1);
 
-    // OvertimeLayout
-    ui -> overTimeCheckBox -> setDisabled(arg1);
-    ui -> overTimeSetRadioButton -> setDisabled(arg1);
-    ui -> overTimeAddRadioButton -> setDisabled(arg1);
-    ui -> overTimeSubRadioButton -> setDisabled(arg1);
-    ui -> overTimeBanRadioButton -> setDisabled(arg1);
-    ui -> endDateTimeEdit -> setDisabled(arg1);
-    ui -> endDateTimeEdit -> setDisabled(arg1);
+    // EndTimeLayout
+    ui -> endTimeCheckBox -> setDisabled(arg1);
 
     // TimeSpanLayout
     ui -> timeSpanCheckBox -> setDisabled(arg1);
-    ui -> timeSpanSetRadioButton -> setDisabled(arg1);
-    ui -> timeSpanAddRadioButton -> setDisabled(arg1);
-    ui -> timeSpanSubRadioButton -> setDisabled(arg1);
-    ui -> timeSpanBanRadioButton -> setDisabled(arg1);
-    ui -> timeSpanLineEdit -> setDisabled(arg1);
-    ui -> timeSpanComboBox -> setDisabled(arg1);
 
     // UseCountLayout
     ui -> useCountCheckBox -> setDisabled(arg1);
-    ui -> useCountSetRadioButton -> setDisabled(arg1);
-    ui -> useCountAddRadioButton -> setDisabled(arg1);
-    ui -> useCountSubRadioButton -> setDisabled(arg1);
-    ui -> useCountBanRadioButton -> setDisabled(arg1);
-    ui -> useCountLineEdit -> setDisabled(arg1);
 }
 
 
+/************************************************************************/
+/*                            设置许可类型                                */
+/************************************************************************/
 void LicenseView::on_licenseTypeComboBox_activated(int index)
 {
     QString licenseType_str = ui -> licenseTypeComboBox -> currentText();
-    get_result();
     if (licenseType_str == "锁定所有许可" || licenseType_str == "解锁所有许可" || licenseType_str == "删除所有许可")
     {
         // setDisabled(true) == setEnabled(false)
@@ -479,48 +581,72 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
 
         // StartTimeLayout
         ui -> startTimeCheckBox -> setDisabled(true);
+
+        // EndtimeLayout
+        ui -> endTimeCheckBox -> setDisabled(true);
+
+        // TimeSpanLayout
+        ui -> timeSpanCheckBox -> setDisabled(true);
+
+        // UseCountLayout
+        ui -> useCountCheckBox -> setDisabled(true);
+
+        // DataLayout
+        ui -> publicGroupBox -> setDisabled(true);
+        ui -> readWriteGroupBox -> setDisabled(true);
+        ui -> onlyReadGroupBox ->setDisabled(true);
+    }
+    else if (licenseType_str == "许可增加")
+    {
+        // setDisabled(true) == setEnabled(false)
+        // LicenseIDLayout
+        ui -> licenseIDLabel -> setDisabled(false);
+        ui -> licenseIDLineEdit -> setDisabled(false);
+        ui -> perpetualLicenseCheckBox -> setDisabled(false);
+
+        // ConcurrentManerLayout
+        ui -> concurrentManerLabel -> setDisabled(false);
+        ui -> singleRadioButton -> setDisabled(false);
+        ui -> networkRadioButton -> setDisabled(false);
+        ui -> concurrentManerComboBox -> setDisabled(true);
+        ui -> concurrentManerLineEdit -> setDisabled(true);
+
+        // StartTimeLayout
+        ui -> startTimeCheckBox -> setDisabled(false);
         ui -> startTimeSetRadioButton -> setDisabled(true);
         ui -> startTimeAddRadioButton -> setDisabled(true);
         ui -> startTimeSubRadioButton -> setDisabled(true);
         ui -> startTimeBanRadioButton -> setDisabled(true);
-        ui -> startDateTimeEdit -> setDisabled(true);
-        ui -> startDateTimeEdit -> setDisabled(true);
+        ui -> startTimeLineEdit -> setDisabled(true);
 
-        // OvertimeLayout
-        ui -> overTimeCheckBox -> setDisabled(true);
-        ui -> overTimeSetRadioButton -> setDisabled(true);
-        ui -> overTimeAddRadioButton -> setDisabled(true);
-        ui -> overTimeSubRadioButton -> setDisabled(true);
-        ui -> overTimeBanRadioButton -> setDisabled(true);
-        ui -> endDateTimeEdit -> setDisabled(true);
-        ui -> endDateTimeEdit -> setDisabled(true);
+        // EndTimeLayout
+        ui -> endTimeCheckBox -> setDisabled(false);
+        ui -> endTimeSetRadioButton -> setDisabled(true);
+        ui -> endTimeAddRadioButton -> setDisabled(true);
+        ui -> endTimeSubRadioButton -> setDisabled(true);
+        ui -> endTimeBanRadioButton -> setDisabled(true);
+        ui -> endTimeLineEdit -> setDisabled(true);
 
         // TimeSpanLayout
-        ui -> timeSpanCheckBox -> setDisabled(true);
+        ui -> timeSpanCheckBox -> setDisabled(false);
         ui -> timeSpanSetRadioButton -> setDisabled(true);
         ui -> timeSpanAddRadioButton -> setDisabled(true);
         ui -> timeSpanSubRadioButton -> setDisabled(true);
         ui -> timeSpanBanRadioButton -> setDisabled(true);
-        ui -> timeSpanLineEdit -> setDisabled(true);
-        ui -> timeSpanComboBox -> setDisabled(true);
 
         // UseCountLayout
-        ui -> useCountCheckBox -> setDisabled(true);
+        ui -> useCountCheckBox -> setDisabled(false);
         ui -> useCountSetRadioButton -> setDisabled(true);
         ui -> useCountAddRadioButton -> setDisabled(true);
         ui -> useCountSubRadioButton -> setDisabled(true);
         ui -> useCountBanRadioButton -> setDisabled(true);
-        ui -> useCountLineEdit -> setDisabled(true);
 
         // DataLayout
-        ui -> readonlyCheckBox -> setDisabled(true);
-        ui -> readonlyButton -> setDisabled(true);
-        ui -> readWriteCheckBox -> setDisabled(true);
-        ui -> readWriteButton -> setDisabled(true);
-        ui -> publicCheckBox -> setDisabled(true);
-        ui -> publicButton -> setDisabled(true);
+        ui -> publicGroupBox -> setDisabled(false);
+        ui -> readWriteGroupBox -> setDisabled(false);
+        ui -> onlyReadGroupBox ->setDisabled(false);
     }
-    else if (licenseType_str == "许可增加" || licenseType_str == "许可更新")
+    else if (licenseType_str == "许可更新")
     {
         // setDisabled(true) == setEnabled(false)
         // LicenseIDLayout
@@ -541,17 +667,15 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
         ui -> startTimeAddRadioButton -> setDisabled(false);
         ui -> startTimeSubRadioButton -> setDisabled(false);
         ui -> startTimeBanRadioButton -> setDisabled(false);
-        ui -> startDateTimeEdit -> setDisabled(false);
-        ui -> startDateTimeEdit -> setDisabled(false);
+        ui -> startTimeLineEdit -> setDisabled(true);
 
-        // OvertimeLayout
-        ui -> overTimeCheckBox -> setDisabled(false);
-        ui -> overTimeSetRadioButton -> setDisabled(false);
-        ui -> overTimeAddRadioButton -> setDisabled(false);
-        ui -> overTimeSubRadioButton -> setDisabled(false);
-        ui -> overTimeBanRadioButton -> setDisabled(false);
-        ui -> endDateTimeEdit -> setDisabled(false);
-        ui -> endDateTimeEdit -> setDisabled(false);
+        // EndtimeLayout
+        ui -> endTimeCheckBox -> setDisabled(false);
+        ui -> endTimeSetRadioButton -> setDisabled(false);
+        ui -> endTimeAddRadioButton -> setDisabled(false);
+        ui -> endTimeSubRadioButton -> setDisabled(false);
+        ui -> endTimeBanRadioButton -> setDisabled(false);
+        ui -> endTimeLineEdit -> setDisabled(true);
 
         // TimeSpanLayout
         ui -> timeSpanCheckBox -> setDisabled(false);
@@ -559,8 +683,6 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
         ui -> timeSpanAddRadioButton -> setDisabled(false);
         ui -> timeSpanSubRadioButton -> setDisabled(false);
         ui -> timeSpanBanRadioButton -> setDisabled(false);
-        ui -> timeSpanLineEdit -> setDisabled(false);
-        ui -> timeSpanComboBox -> setDisabled(false);
 
         // UseCountLayout
         ui -> useCountCheckBox -> setDisabled(false);
@@ -568,15 +690,11 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
         ui -> useCountAddRadioButton -> setDisabled(false);
         ui -> useCountSubRadioButton -> setDisabled(false);
         ui -> useCountBanRadioButton -> setDisabled(false);
-        ui -> useCountLineEdit -> setDisabled(false);
 
         // DataLayout
-        ui -> readonlyCheckBox -> setDisabled(false);
-        ui -> readonlyButton -> setDisabled(false);
-        ui -> readWriteCheckBox -> setDisabled(false);
-        ui -> readWriteButton -> setDisabled(false);
-        ui -> publicCheckBox -> setDisabled(false);
-        ui -> publicButton -> setDisabled(false);
+        ui -> publicGroupBox -> setDisabled(false);
+        ui -> readWriteGroupBox -> setDisabled(false);
+        ui -> onlyReadGroupBox -> setDisabled(false);
     }
     else if (licenseType_str == "许可删除")
     {
@@ -595,47 +713,22 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
 
         // StartTimeLayout
         ui -> startTimeCheckBox -> setDisabled(true);
-        ui -> startTimeSetRadioButton -> setDisabled(true);
-        ui -> startTimeAddRadioButton -> setDisabled(true);
-        ui -> startTimeSubRadioButton -> setDisabled(true);
-        ui -> startTimeBanRadioButton -> setDisabled(true);
-        ui -> startDateTimeEdit -> setDisabled(true);
-        ui -> startDateTimeEdit -> setDisabled(true);
 
-        // OvertimeLayout
-        ui -> overTimeCheckBox -> setDisabled(true);
-        ui -> overTimeSetRadioButton -> setDisabled(true);
-        ui -> overTimeAddRadioButton -> setDisabled(true);
-        ui -> overTimeSubRadioButton -> setDisabled(true);
-        ui -> overTimeBanRadioButton -> setDisabled(true);
-        ui -> endDateTimeEdit -> setDisabled(true);
-        ui -> endDateTimeEdit -> setDisabled(true);
+        // EndTimeLayout
+        ui -> endTimeCheckBox -> setDisabled(true);
 
         // TimeSpanLayout
         ui -> timeSpanCheckBox -> setDisabled(true);
-        ui -> timeSpanSetRadioButton -> setDisabled(true);
-        ui -> timeSpanAddRadioButton -> setDisabled(true);
-        ui -> timeSpanSubRadioButton -> setDisabled(true);
-        ui -> timeSpanBanRadioButton -> setDisabled(true);
-        ui -> timeSpanLineEdit -> setDisabled(true);
-        ui -> timeSpanComboBox -> setDisabled(true);
 
         // UseCountLayout
         ui -> useCountCheckBox -> setDisabled(true);
-        ui -> useCountSetRadioButton -> setDisabled(true);
-        ui -> useCountAddRadioButton -> setDisabled(true);
-        ui -> useCountSubRadioButton -> setDisabled(true);
-        ui -> useCountBanRadioButton -> setDisabled(true);
-        ui -> useCountLineEdit -> setDisabled(true);
 
         // DataLayout
-        ui -> readonlyCheckBox -> setDisabled(true);
-        ui -> readonlyButton -> setDisabled(true);
-        ui -> readWriteCheckBox -> setDisabled(true);
-        ui -> readWriteButton -> setDisabled(true);
-        ui -> publicCheckBox -> setDisabled(true);
-        ui -> publicButton -> setDisabled(true);
+        ui -> publicGroupBox -> setDisabled(true);
+        ui -> readWriteGroupBox -> setDisabled(true);
+        ui -> onlyReadGroupBox ->setDisabled(true);
     }
+    get_result();   // 重新调用一次生成result
 }
 
 
@@ -687,7 +780,7 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
 //    {
 //        qDebug() << "signButton result: " << result;
 //        ret = d2c_add_lic(hD2c, result, (SS_CHAR*)"manage license sample", lic_guid);
-//        ui -> previewTextEdit -> setText(result);
+//        ui -> previewTextBrowser -> setText(result);
 //        free(result);
 //        result = NULL;
 //    }
@@ -713,16 +806,332 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
 //}
 
 
+// ================ 设置单机锁 ================
 void LicenseView::on_singleRadioButton_clicked()
 {
+    get_result();
     ui -> concurrentManerComboBox -> setDisabled(true);
     ui -> concurrentManerLineEdit -> setDisabled(true);
 }
 
 
+// ================ 选择网络锁 ================
 void LicenseView::on_networkRadioButton_clicked()
 {
+    get_result();
     ui -> concurrentManerComboBox -> setDisabled(false);
     ui -> concurrentManerLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_concurrentManerComboBox_activated(int index)
+{
+    get_result();
+}
+
+
+void LicenseView::on_concurrentManerLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_startTimeCheckBox_clicked()
+{
+    get_result();
+}
+
+
+void LicenseView::on_endTimeCheckBox_clicked()
+{
+    get_result();
+}
+
+
+void LicenseView::on_timeSpanCheckBox_clicked()
+{
+    get_result();
+}
+
+
+void LicenseView::on_useCountCheckBox_clicked()
+{
+    get_result();
+}
+
+
+void LicenseView::on_licenseIDLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_timeSpanLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_useCountLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_startDateTimeEdit_dateTimeChanged(const QDateTime &dateTime)
+{
+    get_result();
+}
+
+
+void LicenseView::on_endDateTimeEdit_dateChanged(const QDate &date)
+{
+    get_result();
+}
+
+
+// ================ 公开区-槽 ================
+void LicenseView::on_publicGroupBox_clicked()
+{
+    get_result();
+}
+
+void LicenseView::on_pubDeviationCheckBox_stateChanged(int arg1)
+{
+    get_result();
+    ui -> pubDeviationLineEdit -> setEnabled(arg1);
+}
+
+
+void LicenseView::on_pubDeviationLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_pubResetSizeCheckBox_stateChanged(int arg1)
+{
+    ui -> pubResetSizeLineEdit -> setEnabled(arg1);
+    get_result();
+}
+
+
+void LicenseView::on_pubResetSizeLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_pubHexTextEdit_textChanged()
+{
+    get_result();
+}
+
+
+void LicenseView::on_pubTextEdit_textChanged()
+{
+    get_result();
+}
+
+
+// ================ 读写区-槽 ================
+void LicenseView::on_readWriteGroupBox_clicked()
+{
+    get_result();
+}
+
+
+void LicenseView::on_rwDeviationCheckBox_stateChanged(int arg1)
+{
+    ui -> rwDeviationLineEdit -> setEnabled(arg1);
+    get_result();
+}
+
+
+void LicenseView::on_rwDeviationLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_rwResetSizeCheckBox_stateChanged(int arg1)
+{
+    ui -> rwResetSizeLineEdit -> setEnabled(arg1);
+    get_result();
+}
+
+
+void LicenseView::on_rwResetSizeLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_rwHexTextEdit_textChanged()
+{
+    get_result();
+}
+
+
+void LicenseView::on_rwTextEdit_textChanged()
+{
+    get_result();
+}
+
+
+// ================ 只读区-槽 ================
+void LicenseView::on_onlyReadGroupBox_clicked()
+{
+    get_result();
+}
+
+
+void LicenseView::on_orDeviationCheckBox_stateChanged(int arg1)
+{
+    ui -> orDeviationLineEdit -> setEnabled(arg1);
+    get_result();
+}
+
+
+void LicenseView::on_orDeviationLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_orResetSizeCheckBox_stateChanged(int arg1)
+{
+    ui -> orResetSizeLineEdit -> setEnabled(arg1);
+    get_result();
+}
+
+
+void LicenseView::on_orResetSizeLineEdit_textChanged(const QString &arg1)
+{
+    get_result();
+}
+
+
+void LicenseView::on_orHexTextEdit_textChanged()
+{
+    get_result();
+}
+
+
+void LicenseView::on_orTextEdit_textChanged()
+{
+    get_result();
+}
+
+
+// ================ Start Time Radio Button-槽 ================
+void LicenseView::on_startTimeSetRadioButton_clicked()
+{
+    ui -> startDateTimeEdit -> setDisabled(false);
+    ui -> startTimeLineEdit -> setDisabled(true);
+}
+
+
+void LicenseView::on_startTimeAddRadioButton_clicked()
+{
+    ui -> startDateTimeEdit -> setDisabled(true);
+    ui -> startTimeLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_startTimeSubRadioButton_clicked()
+{
+    ui -> startDateTimeEdit -> setDisabled(true);
+    ui -> startTimeLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_startTimeBanRadioButton_clicked()
+{
+    ui -> startDateTimeEdit -> setDisabled(true);
+    ui -> startTimeLineEdit -> setDisabled(true);
+}
+
+
+// ================ End Time Radio Button-槽 ================
+void LicenseView::on_endTimeSetRadioButton_clicked()
+{
+    ui -> endDateTimeEdit -> setDisabled(false);
+    ui -> endTimeLineEdit -> setDisabled(true);
+}
+
+
+void LicenseView::on_endTimeAddRadioButton_clicked()
+{
+    ui -> endDateTimeEdit -> setDisabled(true);
+    ui -> endTimeLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_endTimeSubRadioButton_clicked()
+{
+    ui -> endDateTimeEdit -> setDisabled(true);
+    ui -> endTimeLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_endTimeBanRadioButton_clicked()
+{
+    ui -> endDateTimeEdit -> setDisabled(true);
+    ui -> endTimeLineEdit -> setDisabled(true);
+}
+
+
+// ================ Time Span Radio Button-槽 ================
+void LicenseView::on_timeSpanSetRadioButton_clicked()
+{
+    ui -> timeSpanLineEdit -> setDisabled(false);
+    ui -> timeSpanComboBox -> setDisabled(false);
+}
+
+
+void LicenseView::on_timeSpanAddRadioButton_clicked()
+{
+    ui -> timeSpanLineEdit -> setDisabled(false);
+    ui -> timeSpanComboBox -> setDisabled(false);
+}
+
+
+void LicenseView::on_timeSpanSubRadioButton_clicked()
+{
+    ui -> timeSpanLineEdit -> setDisabled(false);
+    ui -> timeSpanComboBox -> setDisabled(false);
+}
+
+
+void LicenseView::on_timeSpanBanRadioButton_clicked()
+{
+    ui -> timeSpanLineEdit -> setDisabled(true);
+    ui -> timeSpanComboBox -> setDisabled(true);
+}
+
+
+// ================ Use Count Radio Button-槽 ================
+void LicenseView::on_useCountSetRadioButton_clicked()
+{
+    ui -> useCountLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_useCountAddRadioButton_clicked()
+{
+    ui -> useCountLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_useCountSubRadioButton_clicked()
+{
+    ui -> useCountLineEdit -> setDisabled(false);
+}
+
+
+void LicenseView::on_useCountBanRadioButton_clicked()
+{
+    ui -> useCountLineEdit -> setDisabled(true);
 }
 
