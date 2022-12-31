@@ -175,7 +175,11 @@
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="fileOffsetLineEdit"/>
+     <widget class="QLineEdit" name="fileOffsetLineEdit">
+      <property name="placeholderText">
+       <string>0</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -426,7 +430,11 @@
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="licenseIDLineEdit"/>
+     <widget class="QLineEdit" name="licenseIDLineEdit">
+      <property name="placeholderText">
+       <string>0</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

@@ -16,6 +16,7 @@
 #include <common/ss_help.h>
 
 #define MAX_PATH 260
+#define SS_ERROR 1
 
 namespace Ui {
 class FileView;
@@ -34,6 +35,8 @@ public:
     int make_d2c_to_file(D2C_HANDLE d2c_handle, char* filename_prefix);
 
     int create_JSON();
+
+    int is_sure();
 
 private slots:
     void on_licenseButton_clicked();

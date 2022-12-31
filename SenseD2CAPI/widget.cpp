@@ -54,3 +54,11 @@ void FileView::on_cancelButton_clicked()
 }
 
 
+void LicenseView::on_cancelButton_clicked()
+{
+    this -> close();
+    Widget* W = new Widget;
+    W -> show();
+}
+
+
