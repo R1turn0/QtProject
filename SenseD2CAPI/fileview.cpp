@@ -62,13 +62,11 @@ failed:
     {
         d2c_delete(hD2c);
     }
-
     if (root)
     {
         free(root);
         root = NULL;
     }
-
     return ret;
 }
 
@@ -179,6 +177,9 @@ int FileView::is_sure()
 }
 
 
+/************************************************************************/
+/*                              读取文件                                 */
+/************************************************************************/
 void FileView::on_fileNameToolButton_clicked()
 {
     QString szFileName = QFileDialog::getOpenFileName(
@@ -198,13 +199,26 @@ void FileView::on_fileNameToolButton_clicked()
     }
     ui -> fileNameLineEdit -> setText(szFileName);
     strcpy(fileName, szFileName.toLatin1());
+    create_JSON();
 }
 
 
+/************************************************************************/
+/*                             签发D2C包                                 */
+/************************************************************************/
 void FileView::on_signButton_clicked()
 {
     int ret;
 
+    char hmaster_pin[9] = {"12345678"};
+    MASTER_HANDLE hmaster = NULL;
+
+    SS_BYTE root_ca_cert[CERT_SIZE] = {0};
+    SS_UINT32 root_ca_cert_len = CERT_SIZE;
+
+    D2C_HANDLE hD2c = NULL;
+
+    // ================ 检查输入条件是否合法 ================
     if (is_sure())
     {
         qDebug() << "is_sure error";
@@ -216,6 +230,69 @@ void FileView::on_signButton_clicked()
         qDebug() << "create_JSON error";
         return;
     }
+
+    // ================ 打开控制锁 ================
+    ret = master_open(&hmaster);
+    if (SS_OK != ret)
+    {
+        QMessageBox::warning(this, "错误", "打开控制锁失败,清插入控制锁");
+        return;
+    }
+
+    // ================ 验证控制锁PIN ================
+    ret = master_pin_verify(hmaster, PIN_DEFAULT_INDEX, (SS_BYTE*)hmaster_pin, strlen(hmaster_pin));
+    if (SS_OK != ret)
+    {
+        QMessageBox::warning(this, "错误", "控制PIN验证错误");
+        return;
+    }
+
+    // master_get_ca_cert_ex 支持获取开发锁内多个Root CA证书
+    // 根证书索引序号0，获取根证书用于合成旧用户锁证书链，对应的开发锁不支持PIN码功能。
+    // 根证书索引序号1，获取根证书用于合成新用户锁证书链，使用支持PIN开发锁的开发者 master_get_ca_cert_ex 参数 3 默认设置为1。
+    ret = master_get_ca_cert_ex(hmaster, PKI_CA_TYPE_ROOT, 1, root_ca_cert, root_ca_cert_len, &root_ca_cert_len);
+    if (SS_OK != ret)
+    {
+        QMessageBox::warning(this, "错误", "之所控制锁证书失败");
+        return;
+    }
+
+    // ================ 将指定文件打包到d2C文件 ================
+    //make_infile_d2c_to_file(argc, argv, hmaster, root_ca_cert, root_ca_cert_len);
+    ret = d2c_file_new(hmaster, &hD2c, SIGN_TYPE_SEED, root_ca_cert, root_ca_cert_len);
+    if (SS_OK != ret)
+    {
+        QMessageBox::warning(this, "错误", "创建D2C句柄失败");
+        return;
+    }
+
+    // ================ 根据描述，生成升级包，并添加升级包到 D2C，针对非许可项内容的升级 ================
+    ret = d2c_add_pkg(hD2c, result, (char*)"filed2c_to_lock_demo");
+    if (SS_OK != ret)
+    {
+        QMessageBox::warning(this, "错误", "添加升级参数失败");
+        return;
+    }
+
+
+    // ================ 获取签发完的许可，获取buffer传入空，可获取到许可大小 ================
+    ret =  make_d2c_to_file(hD2c, (char*)"infile_");
+    if (SS_OK != ret)
+    {
+        QMessageBox::warning(this, "错误", "make_d2c_to_file error");
+        return;
+    }
+    //生成用于清空锁的d2c文件
+    make_reset_d2c_to_file(hmaster, root_ca_cert, root_ca_cert_len);
+
+    // ================ 内存清理 ================
+    if (hD2c != NULL)
+    {
+        d2c_delete(hD2c);
+    }
+    master_close(hmaster);
+
+    return;
 }
 
 
@@ -267,23 +344,27 @@ void FileView::on_operationTypeComboBox_currentTextChanged(const QString &arg1)
         ui -> licenseIDLabel -> setDisabled(true);
         ui -> licenseIDLineEdit -> setDisabled(true);
     }
+    create_JSON();
 }
 
 
 void FileView::on_fileTypeComboBox_currentTextChanged(const QString &arg1)
 {
     strcpy(fileType, arg1.toLatin1().data());
+    create_JSON();
 }
 
 
 void FileView::on_fileOffsetLineEdit_textChanged(const QString &arg1)
 {
     fileOffset = arg1;
+    create_JSON();
 }
 
 
 void FileView::on_licenseIDLineEdit_textChanged(const QString &arg1)
 {
     bindLic = arg1;
+    create_JSON();
 }
 

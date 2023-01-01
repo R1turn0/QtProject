@@ -57,7 +57,7 @@ LicenseView::~LicenseView()
 /************************************************************************/
 void LicenseView::on_signButton_clicked()
 {
-    char hmaster_pin[33] = {"12345678"};
+    char hmaster_pin[9] = {"12345678"};
     const char *devp_id = "080000000000090d";
 
     SS_INT32 ret = SS_OK;
@@ -194,18 +194,19 @@ int LicenseView::get_result()
     root = cJSON_CreateObject();
 
 
-    // ================ 添加许可 ================
+    // ================ 许可添加/许可更新 ================
     if (ui -> licenseTypeComboBox -> currentText() == "许可增加" || ui -> licenseTypeComboBox -> currentText() == "许可更新")
     {
         QString szLicID = ui -> licenseIDLineEdit -> text();
         SS_UINT32 licID = szLicID.toUInt();
+
         // ======== 添加许可 ========
+        // ======== 强制写入（标识） ========
+//        cJSON_AddBoolToObject(root, "force", cJSON_True); // 该项目暂无此按钮
         if (ui -> licenseTypeComboBox -> currentText() == "许可增加")
             cJSON_AddStringToObject(root, "op", "addlic");
         else
             cJSON_AddStringToObject(root, "op", "updatelic");
-        // ======== 强制写入（标识） ========
-//        cJSON_AddBoolToObject(root, "force", cJSON_True); // 该项目暂无此按钮
         // ======== 许可ID ========
         cJSON_AddNumberToObject(root, "license_id", licID);
         // ======== 写入单机/网络锁 ========
@@ -252,13 +253,13 @@ int LicenseView::get_result()
 //                itoa(startTimestamp, temp, 10);
                 if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
                 {
-                    if (ui -> startTimeSetRadioButton -> isChecked())
+                    if (ui -> startTimeSetRadioButton -> isChecked())       // 设置
                         sprintf(temp, "=%d", (ui -> startDateTimeEdit -> dateTime()).toUTC().toTime_t());
-                    else if (ui -> startTimeAddRadioButton -> isChecked())
-                        sprintf(temp, "+%d", (ui -> startDateTimeEdit -> dateTime()).toUTC().toTime_t());
-                    else if (ui -> startTimeSubRadioButton -> isChecked())
-                        sprintf(temp, "-%d", (ui -> startDateTimeEdit -> dateTime()).toUTC().toTime_t());
-                    else if (ui -> startTimeBanRadioButton -> isChecked())
+                    else if (ui -> startTimeAddRadioButton -> isChecked())  // 追加
+                        sprintf(temp, "+%d", (ui -> startTimeLineEdit -> text().toLatin1().data()));
+                    else if (ui -> startTimeSubRadioButton -> isChecked())  // 减少
+                        sprintf(temp, "-%d", (ui -> startTimeLineEdit -> text().toLatin1().data()));
+                    else if (ui -> startTimeBanRadioButton -> isChecked())  // 禁用
                         qstrncpy(temp, "disable", sizeof("disable"));
                 }
                 else
@@ -270,13 +271,13 @@ int LicenseView::get_result()
             {
                 if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
                 {
-                    if (ui -> endTimeSetRadioButton -> isChecked())
+                    if (ui -> endTimeSetRadioButton -> isChecked())         // 设置
                         sprintf(temp, "=%d", (ui -> endDateTimeEdit -> dateTime()).toUTC().toTime_t());
-                    else if (ui -> endTimeAddRadioButton -> isChecked())
-                        sprintf(temp, "+%d", (ui -> endDateTimeEdit -> dateTime()).toUTC().toTime_t());
-                    else if (ui -> endTimeSubRadioButton -> isChecked())
-                        sprintf(temp, "-%d", (ui -> endDateTimeEdit -> dateTime()).toUTC().toTime_t());
-                    else if (ui -> endTimeBanRadioButton -> isChecked())
+                    else if (ui -> endTimeAddRadioButton -> isChecked())    // 追加
+                        sprintf(temp, "+%d", (ui -> endTimeLineEdit -> text().toLatin1().data()));
+                    else if (ui -> endTimeSubRadioButton -> isChecked())    // 减少
+                        sprintf(temp, "-%d", (ui -> endTimeLineEdit -> text().toLatin1().data()));
+                    else if (ui -> endTimeBanRadioButton -> isChecked())    // 禁用
                         qstrncpy(temp, "disable", sizeof("disable"));
                 }
                 else

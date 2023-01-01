@@ -17,6 +17,8 @@
 
 #define MAX_PATH 260
 #define SS_ERROR 1
+// 开发锁登录PIN索引（固定0）
+#define PIN_DEFAULT_INDEX   0
 
 namespace Ui {
 class FileView;
