@@ -62,25 +62,6 @@
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QPushButton" name="fileButton">
-      <property name="minimumSize">
-       <size>
-        <width>80</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>80</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="text">
-       <string>文件</string>
-      </property>
-     </widget>
-    </item>
-    <item>
      <widget class="QPushButton" name="licenseButton">
       <property name="minimumSize">
        <size>
@@ -96,6 +77,25 @@
       </property>
       <property name="text">
        <string>许可</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="fileButton">
+      <property name="minimumSize">
+       <size>
+        <width>80</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>80</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="text">
+       <string>文件</string>
       </property>
      </widget>
     </item>
@@ -447,7 +447,7 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -496,11 +496,14 @@
        <property name="lineWidth">
         <number>1</number>
        </property>
+       <property name="placeholderText">
+        <string>此处输入数据</string>
+       </property>
       </widget>
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -628,6 +631,9 @@
        </property>
        <property name="lineWidth">
         <number>1</number>
+       </property>
+       <property name="placeholderText">
+        <string>此处输入数据</string>
        </property>
       </widget>
      </item>
@@ -762,6 +768,9 @@
        <property name="lineWidth">
         <number>1</number>
        </property>
+       <property name="placeholderText">
+        <string>此处输入数据</string>
+       </property>
       </widget>
      </item>
     </layout>
@@ -846,7 +855,7 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -1058,7 +1067,7 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -1169,7 +1178,7 @@
    <property name="checked">
     <bool>false</bool>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>

@@ -32,13 +32,17 @@ public:
     explicit FileView(QWidget *parent = nullptr);
     ~FileView();
 
-    int make_reset_d2c_to_file(MASTER_HANDLE hmaster, SS_BYTE* root_ca_cert, SS_UINT32 root_ca_cert_len);
-
     int make_d2c_to_file(D2C_HANDLE d2c_handle, char* filename_prefix);
+
+    int make_reset_d2c_to_file(MASTER_HANDLE hmaster, SS_BYTE* root_ca_cert, SS_UINT32 root_ca_cert_len);
 
     int create_JSON();
 
     int is_sure();
+
+    int get_file_buffer();
+
+    int char2Byte(char*);
 
 private slots:
     void on_licenseButton_clicked();
@@ -60,13 +64,14 @@ private slots:
 private:
     Ui::FileView *ui;
     SS_CHAR* result;
-    char operationType[12];
+    char operationType[12] = "...";
     char timeStamp[11];
-    char fileType[4];
-    char fileName[256];
-    char fileBuffer[256];
+    char fileType[4] = "...";
+    char fileName[256] = {0};
+    char *fileBuffer = {"0"};
     QString fileOffset;
     QString bindLic;
+    int bindLicArray[256];
 };
 
 #endif // FILEVIEW_H

@@ -43,11 +43,6 @@ LicenseView::~LicenseView()
         free(result);
         result = nullptr;
     }
-    if (root)
-    {
-        cJSON_Delete(root);
-        root = nullptr;
-    }
     delete ui;
 }
 
@@ -152,7 +147,7 @@ void LicenseView::on_signButton_clicked()
 //            strcpy(d2c_filename, strDevSn);
             strcpy(d2c_filename, "SenseD2CAPI");
 
-            if (ui -> licenseTypeComboBox -> currentText() == "许可删除")
+            if (ui -> licenseTypeComboBox -> currentText() == "许可增加")
                 strcat(d2c_filename, "_license_add_one.d2c");
             else if (ui -> licenseTypeComboBox -> currentText() == "许可更新")
                 strcat(d2c_filename, "_license_update_one.d2c");
@@ -190,6 +185,7 @@ int LicenseView::get_result()
 {
     SS_UINT32 ret = SS_ERROR;
     SS_CHAR temp[128] = {0};
+    cJSON* root = nullptr;
 
     root = cJSON_CreateObject();
 
@@ -438,6 +434,13 @@ int LicenseView::get_result()
         return ret;
     }
 
+    // ================释放root================
+    if (root)
+    {
+        cJSON_Delete(root);
+        root = nullptr;
+    }
+
     return SS_OK;
 }
 
@@ -572,6 +575,7 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
         ui -> licenseIDLabel -> setDisabled(true);
         ui -> licenseIDLineEdit -> setDisabled(true);
         ui -> perpetualLicenseCheckBox -> setDisabled(true);
+        ui -> perpetualLicenseCheckBox -> setChecked(false);
 
         // ConcurrentManerLayout
         ui -> concurrentManerLabel -> setDisabled(true);
@@ -654,6 +658,7 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
         ui -> licenseIDLabel -> setDisabled(false);
         ui -> licenseIDLineEdit -> setDisabled(false);
         ui -> perpetualLicenseCheckBox -> setDisabled(false);
+        ui -> perpetualLicenseCheckBox -> setChecked(false);
 
         // ConcurrentManerLayout
         ui -> concurrentManerLabel -> setDisabled(false);
@@ -704,6 +709,7 @@ void LicenseView::on_licenseTypeComboBox_activated(int index)
         ui -> licenseIDLabel -> setDisabled(false);
         ui -> licenseIDLineEdit -> setDisabled(false);
         ui -> perpetualLicenseCheckBox -> setDisabled(true);
+        ui -> perpetualLicenseCheckBox -> setChecked(false);
 
         // ConcurrentManerLayout
         ui -> concurrentManerLabel -> setDisabled(true);

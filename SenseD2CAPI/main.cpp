@@ -20,15 +20,15 @@ int main(int argc, char *argv[])
 //    a.setQuitOnLastWindowClosed(false);
 
     // 测试登陆状态
-//    ret = master_open(&hmaster);
-//    qDebug() << "master_open: " << ret;
-//    ret = master_pin_verify(hmaster, PIN_DEFAULT_INDEX, (SS_BYTE*)hmaster_pin, strlen(hmaster_pin));
-//    qDebug() << "master_pin_verify: " << ret;
-//    if (SS_OK != ret)
-//    {
-//        master_close(hmaster);
-//        return 1;
-//    }
+    ret = master_open(&hmaster);
+    qDebug() << "master_open: " << ret;
+    ret = master_pin_verify(hmaster, PIN_DEFAULT_INDEX, (SS_BYTE*)hmaster_pin, strlen(hmaster_pin));
+    qDebug() << "master_pin_verify: " << ret;
+    if (SS_OK != ret)
+    {
+        master_close(hmaster);
+        return 1;
+    }
 
     Widget w;
     w.show();

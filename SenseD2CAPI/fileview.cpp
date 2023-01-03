@@ -18,59 +18,18 @@ FileView::FileView(QWidget *parent) :
 FileView::~FileView()
 {
     delete ui;
+
+    if (fileBuffer)
+    {
+        free(fileBuffer);
+        fileBuffer = nullptr;
+    }
 }
 
 
-int FileView::make_reset_d2c_to_file(MASTER_HANDLE hmaster, SS_BYTE* root_ca_cert, SS_UINT32 root_ca_cert_len)
-{
-    D2C_HANDLE hD2c = NULL;
-    SS_UINT32 ret = 0;
-    cJSON* root = NULL;
-    char temp[256] = {0};
-
-    ret = d2c_file_new(hmaster, &hD2c, SIGN_TYPE_SEED, root_ca_cert, root_ca_cert_len);
-    if (ret != SS_OK)
-    {
-        sprintf(temp, "生成重置锁D2c失败,创建句柄未成功：[Error] 0x%08X\n", ret);
-        qDebug() << temp;
-        goto failed;
-    }
-
-    root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "op", "reset");
-    // 设置d2c的有效时间范围
-    cJSON_AddNumberToObject(root, "not_before", QDateTime::currentDateTime().toTime_t());
-    cJSON_AddNumberToObject(root, "not_after", QDateTime::currentDateTime().toTime_t() + 60 * 60 * 24 * 365 * 10);
-
-    ret = d2c_add_pkg(hD2c, cJSON_PrintUnformatted(root), "bixun_lock_reset");
-    if (ret != SS_OK)
-    {
-        sprintf(temp, "生成重置锁D2c失败,添加升级参数失败：[Error] 0x%08X\n", ret);
-        qDebug() << temp;
-        goto failed;
-    }
-
-    if((ret = make_d2c_to_file(hD2c, "reset_")) != SS_OK)
-    {
-        sprintf(temp, "写入重置锁D2c文件失败：[Error] 0x%08X\n", ret);
-        qDebug() << temp;
-        goto failed;
-    }
-
-failed:
-    if (hD2c != NULL)
-    {
-        d2c_delete(hD2c);
-    }
-    if (root)
-    {
-        free(root);
-        root = NULL;
-    }
-    return ret;
-}
-
-
+/************************************************************************/
+/*                             签发D2C                                  */
+/************************************************************************/
 int FileView::make_d2c_to_file(D2C_HANDLE d2c_handle, char* filename_prefix)
 {
     int ret = 0;
@@ -117,6 +76,62 @@ int FileView::make_d2c_to_file(D2C_HANDLE d2c_handle, char* filename_prefix)
 }
 
 
+/************************************************************************/
+/*                           生成重置锁D2C                                */
+/************************************************************************/
+int FileView::make_reset_d2c_to_file(MASTER_HANDLE hmaster, SS_BYTE* root_ca_cert, SS_UINT32 root_ca_cert_len)
+{
+    D2C_HANDLE hD2c = NULL;
+    SS_UINT32 ret = 0;
+    cJSON* root = NULL;
+    char temp[256] = {0};
+
+    ret = d2c_file_new(hmaster, &hD2c, SIGN_TYPE_SEED, root_ca_cert, root_ca_cert_len);
+    if (ret != SS_OK)
+    {
+        sprintf(temp, "生成重置锁D2c失败,创建句柄未成功：[Error] 0x%08X\n", ret);
+        qDebug() << temp;
+        goto failed;
+    }
+
+    root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "op", "reset");
+    // 设置d2c的有效时间范围
+    cJSON_AddNumberToObject(root, "not_before", QDateTime::currentDateTime().toTime_t());
+    cJSON_AddNumberToObject(root, "not_after", QDateTime::currentDateTime().toTime_t() + 60 * 60 * 24 * 365 * 10);
+
+    ret = d2c_add_pkg(hD2c, cJSON_PrintUnformatted(root), "bixun_lock_reset");
+    if (ret != SS_OK)
+    {
+        sprintf(temp, "生成重置锁D2c失败,添加升级参数失败：[Error] 0x%08X\n", ret);
+        qDebug() << temp;
+        goto failed;
+    }
+
+    if((ret = make_d2c_to_file(hD2c, "reset_")) != SS_OK)
+    {
+        sprintf(temp, "写入重置锁D2c文件失败：[Error] 0x%08X\n", ret);
+        qDebug() << temp;
+        goto failed;
+    }
+
+failed:
+    if (hD2c != NULL)
+    {
+        d2c_delete(hD2c);
+    }
+//    if (root)
+//    {
+//        free(root);
+//        root = NULL;
+//    }
+    return ret;
+}
+
+
+/************************************************************************/
+/*                            制作JSON包                                 */
+/************************************************************************/
 int FileView::create_JSON()
 {
     int ret = SS_ERROR;
@@ -131,7 +146,8 @@ int FileView::create_JSON()
     cJSON_AddStringToObject(root, "filetype", fileType);
     cJSON_AddStringToObject(root, "filebuffer", fileBuffer);
     cJSON_AddNumberToObject(root, "fileoffset", fileOffset.toInt());
-    cJSON_AddNumberToObject(root, "bind_lic", bindLic.toInt());
+//    cJSON_AddNumberToObject(root, "bind_lic", bindLic.toInt());
+    cJSON_AddItemToObject(root, "bind_lic", cJSON_CreateIntArray(bindLicArray, 1));
 
 make_result:
     // 输出JSON文件
@@ -147,6 +163,12 @@ make_result:
         return ret;
     }
     ui -> showJSONTextEdit -> setText(result);
+
+    if (root)
+    {
+        free(root);
+        root = nullptr;
+    }
 
     return SS_OK;
 }
@@ -199,12 +221,36 @@ void FileView::on_fileNameToolButton_clicked()
     }
     ui -> fileNameLineEdit -> setText(szFileName);
     strcpy(fileName, szFileName.toLatin1());
+
+    get_file_buffer();
+
     create_JSON();
 }
 
 
+int FileView::get_file_buffer()
+{
+    QFile file(fileName);
+    if (!file.exists())
+    {
+        qDebug() << "file not exitst";  // 文件不存在
+        QMessageBox::warning(this, "错误", "文件不存在");
+        return SS_ERROR;
+    }
+    if (file.open(QFile::ReadOnly))
+    {
+        qDebug() << "文件打开成功";
+        fileBuffer = (char*)malloc(file.size() * 2);
+        QByteArray bytes = file.readAll();
+        bytes_to_hexstr(bytes.data(), bytes.size(), fileBuffer);
+    }
+    file.close();
+    return SS_OK;
+}
+
+
 /************************************************************************/
-/*                             签发D2C包                                 */
+/*                             登录锁，签发                               */
 /************************************************************************/
 void FileView::on_signButton_clicked()
 {
@@ -276,7 +322,12 @@ void FileView::on_signButton_clicked()
 
 
     // ================ 获取签发完的许可，获取buffer传入空，可获取到许可大小 ================
-    ret =  make_d2c_to_file(hD2c, (char*)"infile_");
+    if (strcmp(operationType, "addfile"))
+        ret =  make_d2c_to_file(hD2c, (char*)"addfile_");
+    else if (strcmp(operationType, "updatefile"))
+        ret =  make_d2c_to_file(hD2c, (char*)"updatefile_");
+    else if (strcmp(operationType, "delfile"))
+        ret =  make_d2c_to_file(hD2c, (char*)"delfile_");
     if (SS_OK != ret)
     {
         QMessageBox::warning(this, "错误", "make_d2c_to_file error");
@@ -364,7 +415,8 @@ void FileView::on_fileOffsetLineEdit_textChanged(const QString &arg1)
 
 void FileView::on_licenseIDLineEdit_textChanged(const QString &arg1)
 {
-    bindLic = arg1;
+    bindLicArray[0] = arg1.toInt();
+    bindLic = 1;
     create_JSON();
 }
 

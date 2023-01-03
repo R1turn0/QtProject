@@ -62,25 +62,6 @@
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QPushButton" name="fileButton">
-      <property name="minimumSize">
-       <size>
-        <width>80</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>80</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="text">
-       <string>文件</string>
-      </property>
-     </widget>
-    </item>
-    <item>
      <widget class="QPushButton" name="licenseButton">
       <property name="minimumSize">
        <size>
@@ -96,6 +77,25 @@
       </property>
       <property name="text">
        <string>许可</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="fileButton">
+      <property name="minimumSize">
+       <size>
+        <width>80</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>80</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="text">
+       <string>文件</string>
       </property>
      </widget>
     </item>

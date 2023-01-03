@@ -156,7 +156,6 @@ private slots:
 
 private:
     Ui::LicenseView *ui;
-    cJSON* root = nullptr;
     SS_CHAR* result = nullptr;
 };
 
