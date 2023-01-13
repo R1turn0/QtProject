@@ -71,6 +71,7 @@ void LicenseView::on_signButton_clicked()
     SS_CHAR d2c_filename[256] = {0};
     SS_CHAR lic_guid[D2C_GUID_LENGTH] = {0};
 
+    // ======== 判断输入数据合法性 ========
     ret = is_sure();
     if (SS_OK != ret)
     {
@@ -78,6 +79,7 @@ void LicenseView::on_signButton_clicked()
         QMessageBox::warning(this, "错误", tr("is_sure error: %1").arg(ret));
         return;
     }
+    // ======== 打开控制所 ========
     ret = master_open(&hmaster);
     if (SS_OK != ret)
     {
@@ -86,6 +88,7 @@ void LicenseView::on_signButton_clicked()
         return;
     }
     qDebug() << "signButton success master_open: ";
+    // ======== 验证控制所PIN码 ========
     ret = master_pin_verify(hmaster, PIN_DEFAULT_INDEX, (SS_BYTE*)hmaster_pin, strlen(hmaster_pin));
     if (SS_OK != ret)
     {
@@ -96,7 +99,7 @@ void LicenseView::on_signButton_clicked()
     }
     qDebug() << "signButton success master_pin_verify";
 
-    // ========获取p7b证书用于生成许可========
+    // ======== 获取p7b证书用于生成许可 ========
     ret = getUserDevP7b(devp_id, p7b_cert, &p7b_size);
     if (SS_OK != ret)
     {
@@ -108,6 +111,7 @@ void LicenseView::on_signButton_clicked()
 
     getUserDevSN(devp_id, strDevSn);
     hexstr_to_bytes(strDevSn, SLM_LOCK_SN_LENGTH, deviceSn);
+    // ======== 创建 D2C 句柄，用于签发许可 ========
     ret = d2c_lic_new(hmaster, &hD2c, ACCOUNT_TYPE_NONE, deviceSn, sizeof(deviceSn), p7b_cert, p7b_size);
     if (SS_OK != ret)
     {
@@ -118,7 +122,7 @@ void LicenseView::on_signButton_clicked()
     }
     qDebug() << "signButton success d2c_lic_new";
 
-    // ========添加许可信息到d2c句柄并获取许可=========
+    // ======== 添加许可信息到d2c句柄并获取许可 =========
     //添加许可信息到d2c句柄
     //ret = build_license_d2c(hD2c, &iWhich);
     ret = d2c_add_lic(hD2c, result, (SS_CHAR*)"manage license sample", lic_guid);
