@@ -6,6 +6,8 @@ Widget::Widget(QWidget *parent)
     , ui(new Ui::Widget)
 {
     ui->setupUi(this);
+
+//    this -> setWindowIcon(QIcon("://Customize.ico"));
 }
 
 Widget::~Widget()

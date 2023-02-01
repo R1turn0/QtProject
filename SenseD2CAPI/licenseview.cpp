@@ -457,7 +457,7 @@ int LicenseView::is_sure()
     int ret = SS_ERROR;
 
     // 判断许可ID是否合法
-    if ((ui -> licenseIDLineEdit ->text()).isEmpty())
+    if ((ui -> licenseIDLineEdit -> text()).isEmpty() && ui -> licenseIDLineEdit -> isEnabled())
     {
         QMessageBox::warning(this, "错误", "许可ID不能为空");
         return ret;

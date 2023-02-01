@@ -69,3 +69,9 @@ win32: LIBS += -L$$PWD/lib/ -llibx509
 
 INCLUDEPATH += $$PWD/.
 DEPENDPATH += $$PWD/.
+
+RESOURCES +=
+
+
+# Icon
+RC_ICONS = ./Icon/Customize.ico
