@@ -43,6 +43,10 @@ public:
 
     int is_sure();
 
+    void showHexView();
+
+    void showStringView();
+
 private slots:
     void on_fileButton_clicked();
 

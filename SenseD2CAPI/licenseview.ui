@@ -477,6 +477,9 @@
        <property name="lineWidth">
         <number>1</number>
        </property>
+       <property name="placeholderText">
+        <string>Hex</string>
+       </property>
       </widget>
      </item>
      <item>
@@ -613,6 +616,9 @@
        <property name="lineWidth">
         <number>1</number>
        </property>
+       <property name="placeholderText">
+        <string>Hex</string>
+       </property>
       </widget>
      </item>
      <item>
@@ -748,6 +754,9 @@
        </property>
        <property name="lineWidth">
         <number>1</number>
+       </property>
+       <property name="placeholderText">
+        <string>Hex</string>
        </property>
       </widget>
      </item>

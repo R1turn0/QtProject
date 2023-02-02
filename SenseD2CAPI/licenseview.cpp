@@ -26,6 +26,14 @@ LicenseView::LicenseView(QWidget *parent) :
     ui -> orDeviationLineEdit       -> setValidator(validator);
     ui -> orResetSizeLineEdit       -> setValidator(validator);
 
+    // QLineedit限定只输入16进制字符的正则表达式这样写："^[0-9a-fA-F]+$"
+    // 16进制字符后插入空格则 "^[0-9a-fA-F ]+$"
+
+    // 设置QTextEdit输入模式为覆盖
+    ui -> pubHexTextEdit -> setOverwriteMode(true);
+    ui -> rwHexTextEdit -> setOverwriteMode(true);
+    ui -> orHexTextEdit -> setOverwriteMode(true);
+
     // 设置RadioButtonGrop，添加RadioButton并设置ID，通过checkedId()选择信号
 //    QButtonGroup* concurrentManerRadioButtonGroup = new QButtonGroup(this);
 //    concurrentManerRadioButtonGroup -> addButton(ui -> singleRadioButton, 0);
@@ -935,13 +943,20 @@ void LicenseView::on_pubResetSizeLineEdit_textChanged(const QString &arg1)
 
 void LicenseView::on_pubHexTextEdit_textChanged()
 {
+    // 在输入模式为覆盖时，先删除被覆盖的字符，此时触发一次textChanged信号，后再输入覆盖的字符，不触发textChanged信号
     get_result();
+
+    if (ui -> pubHexTextEdit -> hasFocus())
+        showStringView();
 }
 
 
 void LicenseView::on_pubTextEdit_textChanged()
 {
     get_result();
+
+    if (ui -> pubTextEdit -> hasFocus())
+        showHexView();
 }
 
 
@@ -981,12 +996,18 @@ void LicenseView::on_rwResetSizeLineEdit_textChanged(const QString &arg1)
 void LicenseView::on_rwHexTextEdit_textChanged()
 {
     get_result();
+
+    if (ui -> pubHexTextEdit -> hasFocus())
+        showStringView();
 }
 
 
 void LicenseView::on_rwTextEdit_textChanged()
 {
     get_result();
+
+    if (ui -> pubTextEdit -> hasFocus())
+        showHexView();
 }
 
 
@@ -1026,12 +1047,20 @@ void LicenseView::on_orResetSizeLineEdit_textChanged(const QString &arg1)
 void LicenseView::on_orHexTextEdit_textChanged()
 {
     get_result();
+
+    if (ui -> pubHexTextEdit -> hasFocus())
+        showStringView();
 }
 
 
 void LicenseView::on_orTextEdit_textChanged()
 {
     get_result();
+
+    showHexView();
+
+    if (ui -> pubTextEdit -> hasFocus())
+        showHexView();
 }
 
 
@@ -1146,3 +1175,70 @@ void LicenseView::on_useCountBanRadioButton_clicked()
     ui -> useCountLineEdit -> setDisabled(true);
 }
 
+
+void LicenseView::showHexView()
+{
+    QString str = ui -> pubTextEdit -> toPlainText();
+    QByteArray bytes;
+
+    ui -> pubHexTextEdit -> setText("");
+    for (QString::const_iterator cit = str.cbegin(); cit < str.cend(); cit++)
+    {
+        // .append() 会自动换行，.insertPlainText() 不会自动换行
+        ui -> pubHexTextEdit -> insertPlainText(QString(*cit).toLatin1().toHex());
+        ui -> pubHexTextEdit -> insertPlainText(" ");
+    }
+
+    //    // 将QString转译为Hex后显示在Hex编辑器中，注释原因为转移为Hex后中间没有空格
+    //    QString str = ui -> pubTextEdit -> toPlainText();
+    //    ui -> pubHexTextEdit -> setText(str.toLatin1().toHex());
+}
+
+
+void LicenseView::showStringView()
+{
+    unsigned char inChar, tmp;
+    QString str = ui -> pubHexTextEdit -> toPlainText();
+    QString outStr;
+    QByteArray bytes;
+    QString tmpStr1, tmpStr2;
+
+    // 输入两个Hex数后添加空格
+    str = str.replace(" ", "");// 移除空格
+    int len = str.count();
+
+    // 记录光标所在位置
+    QTextCursor cursor = ui -> pubHexTextEdit -> textCursor();
+    int blockNumber = cursor.blockNumber();
+    int columnNumber = cursor.columnNumber();
+
+    // 获取文本，并在每个Hex中间加入空格
+    tmpStr2 = "";
+    for (int i = 0; i < (((len + 1) / 2) - 1); i++)
+    {
+        tmpStr1 = str.mid(i * 2, 2);
+        tmpStr2 += tmpStr1 + " ";
+    }
+    tmpStr1 = str.mid(len - (2 - len % 2), 2);
+    tmpStr2 += tmpStr1;
+    if (len % 2 == 0)
+        tmpStr2 += " ";
+
+    // 临时屏蔽控件信号，设置Hex文本
+    ui -> pubHexTextEdit -> blockSignals(true);
+    ui -> pubHexTextEdit -> setText(tmpStr2);
+    ui -> pubHexTextEdit -> blockSignals(false);
+
+    // 移动光标到末尾
+//    cursor.movePosition(QTextCursor::End);
+    cursor.setPosition(columnNumber);
+    ui -> pubHexTextEdit -> setTextCursor(cursor);
+
+    // 将Hex转换为字符并显示
+    str.remove(QRegExp("\\s"));
+    if (str.count() % 2 != 0)
+        str.append("0");
+    bytes = str.toLatin1();
+//    bytes.fromHex(bytes);
+    ui -> pubTextEdit -> setText(bytes.fromHex(bytes));
+}
